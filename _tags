@@ -1,0 +1,2 @@
+"src/hw1.ml": camlp4o, use_openin
+<src/**>: include
