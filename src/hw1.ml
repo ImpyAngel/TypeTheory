@@ -65,10 +65,12 @@ let rec string_of_lambda x =
 let lambda_of_string x =
 let lexer = make_lexer ["\\"; "."; "("; ")"] in
 let rec parse_lambda = parser
- | [< l = parse_abs >] -> l
  | [< l1 = parse_expr; l2 = lambda_helper l1>] -> l2
+ | [< l1 = parse_abs; l2 = lambda_helper l1>] -> l2
+ | [< l = parse_abs >] -> l
 and lambda_helper l1 = parser
  | [< l2 = parse_abs >] -> App (l1, l2)
+ | [< l2 = parse_expr >] -> App (l1, l2)
  | [< >] -> l1
 and parse_abs = parser
  | [< 'Kwd "\\"; 'Ident var; 'Kwd "."; l = parse_lambda >] -> Abs (var, l)
@@ -78,6 +80,6 @@ and parse_expr = parser
 parse_lambda(lexer (Stream.of_string x));;
 
 let test_lambda s = string_of_lambda (lambda_of_string s)
-let () = print_string (test_lambda "\\x.y")
+(* let () = print_string (test_lambda "\\x.y") *)
 (* let () = print_list (merge_sort [1; 2; 3; 1; 5; -3]) *)
 (* print_string 	(string_of_lambda (Abs ("x",(App ((Var "y"),(Var "z")))))) *)

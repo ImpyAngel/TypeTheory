@@ -1,4 +1,4 @@
-open Hw1
+open Hw1;;
 
 type simp_type = S_Elem of string | S_Arrow of simp_type * simp_type
 val infer_simp_type : lambda -> ((string * simp_type list) * simp_type) option

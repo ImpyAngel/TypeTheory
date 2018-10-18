@@ -1,8 +1,7 @@
-all: hw1 hw1_reduction hw2_unify
+all: hw1 hw1_reduction
 
 hw1: hw1.native
 hw1_reduction: hw1_reduction.native
-hw2_unify: hw2_unify.native
 
 %.native:
 	@echo "Building <$*>:"
