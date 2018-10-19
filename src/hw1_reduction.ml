@@ -29,19 +29,13 @@ let rec has_free key lambda =
 (** Returns `dest`, where all free `key`s replaced by `src`
     or throws an error, if `src` is not free for substitution *)
 let substitute src dest key =
-  let src_free_vars = free_vars_set src in
-  let no_key_to_replace x = not (has_free key x) in
-  let not_bounding x = not (StringSet.mem x src_free_vars) in
-  let str = string_of_lambda in
-  let error() = "'" ^ (str src) ^ "' is not free for substitution in '" ^
-                (str dest) ^ "' instead of '" ^ key ^ "'" in
   let rec substitute_rec dest =
     match dest with
     | Var v -> if (v = key) then src else dest
     | App (x, y) -> App(substitute_rec x, substitute_rec y);
-    | Abs (x, y) when no_key_to_replace dest -> dest
-    | Abs (x, y) when not_bounding x -> Abs (x, substitute_rec y)
-    | _ -> failwith (error())
+    | Abs (x, y) when not (has_free key dest) -> dest
+    | Abs (x, y) when not (StringSet.mem x (free_vars_set src))  -> Abs (x, substitute_rec y)
+    | _ -> failwith "not free for sub"
   in substitute_rec dest;;
 
 (* Проверить свободу для подстановки. Параметры:
@@ -50,6 +44,7 @@ let free_to_subst src dest key =
   try
     let _ = substitute src dest key in true
   with _ -> false;;
+
 (* Вернуть список имён свободных переменных *)
 let free_vars x = StringSet.elements (free_vars_set x)
 
@@ -68,29 +63,29 @@ let rec all_vars_set lam =
 
 (* Проверить, альфа-эквивалентны ли лямбда-выражения *)
 let is_alpha_equivalent first second = 
- let rec is_alpha_help first second vars = match (first, second) with
- | (Var v1, Var v2) -> (v1 = v2)
- | (App (x1, y1), App (x2, y2)) -> (is_alpha_help x1 x2 vars) && (is_alpha_help y1 y2 vars)
- | (Abs (var1, lam1), Abs (var2, lam2)) ->
-  let new_var = (StringSet.max_elt vars) ^ "#" in 
-   is_alpha_help (substitute (Var new_var) lam1 var1) (substitute (Var new_var) lam2 var2) (StringSet.add new_var vars)
- | _ -> false
- in is_alpha_help first second (StringSet.union (all_vars_set first) (all_vars_set second));;
+  let rec is_alpha_help first second vars = match (first, second) with
+    | (Var v1, Var v2) -> (v1 = v2)
+    | (App (x1, y1), App (x2, y2)) -> (is_alpha_help x1 x2 vars) && (is_alpha_help y1 y2 vars)
+    | (Abs (var1, lam1), Abs (var2, lam2)) ->
+      let new_var = (StringSet.max_elt vars) ^ "r" in 
+        is_alpha_help (substitute (Var new_var) lam1 var1) (substitute (Var new_var) lam2 var2) (StringSet.add new_var vars)
+    | _ -> false
+  in is_alpha_help first second (StringSet.union (all_vars_set first) (all_vars_set second));;
 
 
 (* для факторизации *)
 let rec add_x lambda = match lambda with
- | Var v ->  Var ("u" ^ v) 
+ | Var v ->  Var ("x" ^ v) 
  | App (x, y) -> App (add_x x, add_x y)
- | Abs (x, lambda) -> Abs ("u" ^ x, add_x lambda) 
+ | Abs (x, lambda) -> Abs ("x" ^ x, add_x lambda) 
 
-(* факторизация по отношении эквивалентности *)
-let rec alfa_equivalent_factorization lambda quntors size_quntors = match lambda with
+(* факторизация по эквивалентности *)
+let rec alfa_equivalent_factorization lambda quntors = match lambda with
 | Var v -> if (StringMap.mem v quntors) then Var (StringMap.find v quntors) else lambda
-| App (first, second) -> App ((alfa_equivalent_factorization first quntors size_quntors), (alfa_equivalent_factorization second quntors size_quntors))
+| App (first, second) -> App ((alfa_equivalent_factorization first quntors), (alfa_equivalent_factorization second quntors))
 | Abs (v, lam) -> 
- let change_v = string_of_int size_quntors in
-  Abs (change_v, alfa_equivalent_factorization lam (StringMap.add v change_v quntors) (size_quntors + 1));;
+  let change_v = "y" ^ (string_of_int (StringMap.cardinal quntors)) in
+  Abs (change_v, alfa_equivalent_factorization lam (StringMap.add v change_v quntors));;
 
 let rec normal_beta_reduction_rec lambda = match lambda with
  | Var v -> None 
@@ -122,7 +117,7 @@ let rec reduce_with_mem lambda preproc =
   	 match norm_first with
   	 | Abs (v1, l1) -> reduce_with_mem (App (norm_first, second)) p
   	 | _ -> let (norm_second, p2) = reduce_with_mem second p in (App (norm_first, norm_second), p2)) in
-	let to_unary k = string_of_lambda (alfa_equivalent_factorization k StringMap.empty 0) in
+	let to_unary k = string_of_lambda (alfa_equivalent_factorization k StringMap.empty) in
 	let key = to_unary lambda in
 	if (StringMap.mem key preproc) 
 	 then (lambda_of_string (StringMap.find key preproc), preproc)
