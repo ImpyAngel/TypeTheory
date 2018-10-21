@@ -1,0 +1,1 @@
+rm src/*.cm* src/*.out
