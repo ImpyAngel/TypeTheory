@@ -31,7 +31,7 @@ let rec has_free key lambda =
 let substitute src dest key =
   let rec substitute_rec dest =
     match dest with
-    | Var v -> if (v = key) then src else dest
+| Var v -> if (v = key) then src else dest
     | App (x, y) -> App(substitute_rec x, substitute_rec y);
     | Abs (x, y) when not (has_free key dest) -> dest
     | Abs (x, y) when not (StringSet.mem x (free_vars_set src))  -> Abs (x, substitute_rec y)
@@ -77,7 +77,7 @@ let is_alpha_equivalent first second =
 let rec add_x lambda = match lambda with
  | Var v ->  Var ("x" ^ v) 
  | App (x, y) -> App (add_x x, add_x y)
- | Abs (x, lambda) -> Abs ("x" ^ x, add_x lambda) 
+ | Abs (x, lambda) -> Abs ("x" ^ x, add_x lambda);;
 
 (* факторизация по эквивалентности *)
 let rec alfa_equivalent_factorization lambda quntors = match lambda with
@@ -105,12 +105,12 @@ let rec normal_beta_reduction_rec lambda = match lambda with
  | Abs (v, lam) ->  
   match normal_beta_reduction_rec lam with
   | Some x -> Some (Abs (v, x))  
-  | _ -> None
+  | _ -> None;;
 
 (* Выполнить один шаг бета-редукции, используя нормальный порядок *)
 let normal_beta_reduction lambda = match normal_beta_reduction_rec lambda with
  | Some x -> x
- | _ -> lambda
+ | _ -> lambda;;
 
 let rec reduce_with_mem lambda preproc =
 	let reduce_app first second = (let (norm_first, p) = reduce_with_mem first preproc in
@@ -133,5 +133,5 @@ let rec reduce_with_mem lambda preproc =
 (* Свести выражение к нормальной форме с использованием нормального
    порядка редукции; реализация должна быть эффективной: использовать
    меморизацию *)
-let reduce_to_normal_form lambda = fst (reduce_with_mem (add_x lambda) StringMap.empty)
+let reduce_to_normal_form lambda = fst (reduce_with_mem (add_x lambda) StringMap.empty);;
 	

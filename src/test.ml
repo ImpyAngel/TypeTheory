@@ -2,7 +2,7 @@
 open Hw1;;
 open Hw1_reduction;;
 open Hw2_unify;;
-(* open Hw2_inference;; *)
+open Hw2_inference;;
 
 type my_type =
     | Header of string * (my_type list)
@@ -17,8 +17,8 @@ type my_type =
     | Eq of (algebraic_term * algebraic_term)
     | System of (algebraic_term * algebraic_term) list
     | Solved_system of (string * algebraic_term) list option
-    (* | S_type of simp_type *)
-    (* | HM_type of hm_type *)
+    | S_type of simp_type
+    | HM_type of hm_type
 
 let rec print_string_list = function
     | [] -> ()
@@ -31,6 +31,22 @@ let rec print_int_list = function
 let rec string_of_term t = match t with
     | Var a -> a
     | Fun (f, lst) -> f ^ "(" ^ (String.concat ", " (List.map (string_of_term) lst)) ^ ")";;
+
+let rec string_of_s_type s_t = match s_t with
+    | S_Elem name -> name
+    | S_Arrow (s_t1, s_t2) -> "(" ^ (string_of_s_type s_t1) ^ " -> " ^ (string_of_s_type s_t2) ^ ")";;
+
+let rec string_of_hm_type h_t = match h_t with
+    | HM_Elem name -> name
+    | HM_Arrow (h_t1, h_t2) -> "(" ^ (string_of_hm_type h_t1) ^ " -> " ^ (string_of_hm_type h_t2) ^ ")"
+    | HM_ForAll (name, h_t) -> "[forall " ^ name ^ "." ^ (string_of_hm_type h_t) ^ "]";;
+
+let rec string_of_hm_lambda h_l = match h_l with
+    | HM_Var name -> name
+    | HM_App (h_l1, h_l2) -> "(" ^ (string_of_hm_lambda h_l1) ^ " " ^ (string_of_hm_lambda h_l2) ^ ")"
+    | HM_Abs (name, h_l) -> "\\" ^ name ^ "." ^ (string_of_hm_lambda h_l)
+    | HM_Let (name, h_l1, h_l2) -> "let " ^ name ^ " = " ^ (string_of_hm_lambda h_l1) ^ " in " ^ (string_of_hm_lambda h_l2)
+
 
 let string_of_eq (t1, t2) = string_of_term t1 ^ " = " ^ string_of_term t2;;
 
@@ -46,9 +62,9 @@ let print_term term = print_string (string_of_term term);;
 
 let print_eq eq = print_string (string_of_eq eq);;
 
-(* let print_s_type s_t = print_string(string_of_s_type s_t);; *)
+let print_s_type s_t = print_string(string_of_s_type s_t);;
 
-(* let print_hm_type hm_t = print_string(string_of_hm_type hm_t);; *)
+let print_hm_type hm_t = print_string(string_of_hm_type hm_t);;
 
 let tab_size = ref 0;;
 
@@ -70,8 +86,8 @@ let rec my_print obj =
             | Solved_system v -> (match v with
                 | None -> my_print(String "No solution, sorry(")
                 | Some sys -> List.iter (fun (var, term) -> my_print (String (var ^ " = " ^ (string_of_term term)))) sys)
-            (* | S_type v -> print_s_type v *)
-            (* | HM_type v -> print_hm_type v *)
+            | S_type v -> print_s_type v
+            | HM_type v -> print_hm_type v
             ) in
 
     (match obj with
@@ -226,14 +242,12 @@ let third_hw_tests = Header ("------THIRD HW----", [
                 | None -> false
                 | Some subst -> check_solution subst sys in
             [Solved_system res;
-            Bool (check_correctness sys res)]
-            )
-]);;
+            Bool (check_correctness sys res)])])
 
-(* let fourth_hw_tests = Header ("-----FOURTH HW----", [
+let fourth_hw_tests = Header ("-----FOURTH HW----", [
     T_case ("infer_simp_type",
         let lambda1 = Abs ("f", Abs ("x", App (Var "f", App (Var "f", Var "x")))) in
-
+        let lambda2 = Abs ("f", Abs ("x", App (Var "f", Var "x"))) in 
         let check_infer_type lambda = match infer_simp_type lambda with
             | None -> String "Failed to infer"
             | Some (l, res) -> T_case ("check_type_inference:",
@@ -243,11 +257,12 @@ let third_hw_tests = Header ("------THIRD HW----", [
                                   S_type res]) in
 
             [check_infer_type lambda1;
-            check_infer_type (lambda_of_string "\\a.\\b.\\c.\\d.\\e.\\f.\\g.(a b c d e f g)")]);
+             check_infer_type lambda2;]); 
 
     T_case ("algorithm_w",
         let l1 = HM_Abs ("x", HM_Var "x") in
         let l2 = HM_Let ("q", HM_App (HM_Var "f", HM_App (HM_Var "f", HM_Var "x")), HM_Abs ("f", HM_Abs ("x", HM_Var "q"))) in
+        let l3 = HM_Let ("id", HM_Abs ("x", HM_Var "x"), HM_Var "id") in 
 
         let check_algorithm_w lambda = match algorithm_w lambda with
             | None -> String "Failed to infer"
@@ -258,13 +273,14 @@ let third_hw_tests = Header ("------THIRD HW----", [
                                   HM_type res]) in
         [check_algorithm_w l1;
         check_algorithm_w l2;
+        check_algorithm_w l3;
         check_algorithm_w (HM_Var "x")]
         )
-]);; *)
+]);;
 
 my_print first_hw_tests;;
 my_print second_hw_tests;;
 my_print third_hw_tests;;
-(* my_print fourth_hw_tests;; *)
+my_print fourth_hw_tests;;
 
 (* my_print (Lambda (reduce_to_normal_form (lambda_of_string "(\\x.\\y.x) (\\y.y)"))) *) 

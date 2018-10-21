@@ -29,6 +29,9 @@ let check_solution x y =
   	substitute l = substitute r;;
 
 let solve_system x = 
+	let modify_solution v term system =
+		(let apsuvt = apply_substitution [(v, term)] in
+		List.map (fun (f, s) -> (f, apsuvt s)) system) in
 	let rec rec_solve_system system_list solution = match system_list with
 		| [] -> solution
 	 	| x::xs -> 
@@ -37,7 +40,7 @@ let solve_system x =
 				List.map (fun (first, second) -> (apsuvt first, apsuvt second)) xs in
 			let check_var v term = if (SS.mem v (term_names term))
 				then failwith "x = f(..x..)"
-				else rec_solve_system (subs_for_system v term) (solution @ [(v, term)]) in
+				else rec_solve_system (subs_for_system v term) ((modify_solution v term solution) @ [(v, term)]) in
 	 	match x with
 			| (l, r) when l = r -> rec_solve_system xs solution
 			| (Var v, term) -> check_var v term
