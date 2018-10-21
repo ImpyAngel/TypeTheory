@@ -1,2 +1,4 @@
-ocamlc src/hw1.mli src/src/hw1.ml src/hw1_reduction.mli src/hw1_reduction.ml src/hw2_unify.mli src/hw2_unify.ml src/hw2_inference.mli src/hw2_inference.ml src/test.ml
-./src/a.out
+cd src/ 
+ocamlc hw1.mli hw1_reduction.mli hw2_unify.mli hw2_inference.mli
+ocamlc -pp camlp4o  hw1.mli hw1.ml hw1_reduction.mli hw1_reduction.ml hw2_unify.mli hw2_unify.ml hw2_inference.mli hw2_inference.ml test.ml
+./a.out
