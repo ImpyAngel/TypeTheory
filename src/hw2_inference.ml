@@ -34,8 +34,8 @@ let rec add_x lambda = match lambda with
  | Var v ->  Var ("x" ^ v) 
  | Abs (x, lambda) -> Abs ("x" ^ x, add_x lambda);;
 
+let new_types_stream = Stream.from (fun i -> Some ("type" ^ string_of_int i));;
 let infer_simp_type lambda =
-  let new_types_stream = Stream.from (fun i -> Some ("type" ^ string_of_int i)) in
   let lambda = add_x lambda in
   let add_type_to_map map v = SM.add v (Stream.next new_types_stream) map in
   let rec to_system lambda types =
@@ -117,9 +117,8 @@ let generalize type_env hm_type =
   let add_quantifier var hm_type = HM_ForAll (var, hm_type) in
   SS.fold add_quantifier new_forall_vars hm_type;;
 
-let algorithm_w hm_lambda =
-  let unique_var = Stream.from (fun i -> Some ("var" ^ string_of_int i)) in
-
+let unique_var = Stream.from (fun i -> Some ("var" ^ string_of_int i));;
+let algorithm_w hm_lambda = 
   let rec instantiate hm_type =
   match hm_type with
   | HM_ForAll (a, b) ->

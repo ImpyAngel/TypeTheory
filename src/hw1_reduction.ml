@@ -1,15 +1,15 @@
 open Hw1;;
 
-module StringSet = Set.Make(String);;
-module StringMap = Map.Make(String);;
+module SS = Set.Make(String);;
+module SM = Map.Make(String);;
 
 let lam = Abs("x", (App (Var "x", Var "y")))
 
 let rec free_vars_set lam =
  match lam with
- | Var v -> StringSet.singleton v
- | App (x, y) -> StringSet.union (free_vars_set x) (free_vars_set y)
- | Abs (x, y) -> StringSet.remove x (free_vars_set y)
+ | Var v -> SS.singleton v
+ | App (x, y) -> SS.union (free_vars_set x) (free_vars_set y)
+ | Abs (x, y) -> SS.remove x (free_vars_set y)
 
 
 let rec expr_after_subst what source var =  
@@ -32,7 +32,7 @@ let substitute src dest key =
 | Var v -> if (v = key) then src else dest
     | App (x, y) -> App(substitute_rec x, substitute_rec y);
     | Abs (x, y) when not (has_free key dest) -> dest
-    | Abs (x, y) when not (StringSet.mem x (free_vars_set src))  -> Abs (x, substitute_rec y)
+    | Abs (x, y) when not (SS.mem x (free_vars_set src))  -> Abs (x, substitute_rec y)
     | _ -> failwith "not free for sub"
   in substitute_rec dest;;
 
@@ -44,20 +44,20 @@ let free_to_subst src dest key =
   with _ -> false;;
 
 (* Вернуть список имён свободных переменных *)
-let free_vars x = StringSet.elements (free_vars_set x)
+let free_vars x = SS.elements (free_vars_set x)
 
 (* Проверить, находится ли лямбда-выражение в нормальной форме *)
 let rec is_normal_form lambda = match lambda with
-    | App (Abs (tmp0, tmp1), tmp2) -> false
+    | App (Abs (tmp0, tmp1), tmp2) -> not (free_to_subst tmp2 tmp1 tmp0)
     | Var tmp -> true
     | App (tmp0, tmp1) -> (is_normal_form tmp0) && (is_normal_form tmp1)
     | Abs (tmp0, tmp1) -> is_normal_form tmp1;;
 
 let rec all_vars_set lam =
  match lam with
- | Var v -> StringSet.singleton v
- | App (x, y) -> StringSet.union (all_vars_set x) (all_vars_set y)
- | Abs (x, y) -> StringSet.union (StringSet.singleton x) (all_vars_set y);;
+ | Var v -> SS.singleton v
+ | App (x, y) -> SS.union (all_vars_set x) (all_vars_set y)
+ | Abs (x, y) -> SS.union (SS.singleton x) (all_vars_set y);;
 
 (* Проверить, альфа-эквивалентны ли лямбда-выражения *)
 let is_alpha_equivalent first second = 
@@ -65,10 +65,10 @@ let is_alpha_equivalent first second =
     | (Var v1, Var v2) -> (v1 = v2)
     | (App (x1, y1), App (x2, y2)) -> (is_alpha_help x1 x2 vars) && (is_alpha_help y1 y2 vars)
     | (Abs (var1, lam1), Abs (var2, lam2)) ->
-      let new_var = (StringSet.max_elt vars) ^ "r" in 
-        is_alpha_help (substitute (Var new_var) lam1 var1) (substitute (Var new_var) lam2 var2) (StringSet.add new_var vars)
+      let new_var = (SS.max_elt vars) ^ "r" in 
+        is_alpha_help (substitute (Var new_var) lam1 var1) (substitute (Var new_var) lam2 var2) (SS.add new_var vars)
     | _ -> false
-  in is_alpha_help first second (StringSet.union (all_vars_set first) (all_vars_set second));;
+  in is_alpha_help first second (SS.union (all_vars_set first) (all_vars_set second));;
 
 
 (* для факторизации *)
@@ -79,11 +79,11 @@ let rec add_x lambda = match lambda with
 
 (* факторизация по эквивалентности *)
 let rec alfa_equivalent_factorization lambda quntors = match lambda with
-| Var v -> if (StringMap.mem v quntors) then Var (StringMap.find v quntors) else lambda
+| Var v -> if (SM.mem v quntors) then Var (SM.find v quntors) else lambda
 | App (first, second) -> App ((alfa_equivalent_factorization first quntors), (alfa_equivalent_factorization second quntors))
 | Abs (v, lam) -> 
-  let change_v = "y" ^ (string_of_int (StringMap.cardinal quntors)) in
-  Abs (change_v, alfa_equivalent_factorization lam (StringMap.add v change_v quntors));;
+  let change_v = "y" ^ (string_of_int (SM.cardinal quntors)) in
+  Abs (change_v, alfa_equivalent_factorization lam (SM.add v change_v quntors));;
 
 let rec normal_beta_reduction_rec lambda = match lambda with
  | Var v -> None 
@@ -106,46 +106,75 @@ let rec normal_beta_reduction_rec lambda = match lambda with
   | _ -> None;;
 
 (* Выполнить один шаг бета-редукции, используя нормальный порядок *)
-let normal_beta_reduction lambda = match normal_beta_reduction_rec lambda with
- | Some x -> x
- | _ -> lambda;;
+type arena_lambda = Var_arena of string
+                | Abs_arena of (string * arena_lambda ref)
+                | App_arena of (arena_lambda ref * arena_lambda ref);;
 
-let rec one_step_with_succ lambda preproc = 
-  let reduce_app first second = (let (norm_first, p, flag) = one_step_with_succ first preproc in
-     if (flag) 
-      then (App (norm_first, second), p, flag) 
-      else match norm_first with
-      | Abs (v1, l1) -> one_step_with_succ (App (norm_first, second)) p
-      | _ -> 
-      let (norm_second, p2, flag2) = one_step_with_succ second p in (App (norm_first, norm_second), p2, flag2)) in
-  let to_unary k = string_of_lambda (alfa_equivalent_factorization k StringMap.empty) in
-  let key = to_unary lambda in
-  if (is_normal_form lambda)
-   then (lambda, preproc, false)
-   else
-    if (StringMap.mem key preproc) 
-     then (lambda_of_string (StringMap.find key preproc), preproc, true)
-     else 
-     let (value, new_preproc, continue_norm) = match lambda with
-         | Var v -> (lambda, preproc, false)
-         | App (Abs (v, first), second) -> if (free_to_subst second first v) 
-          then ((substitute second first v), preproc, true)
-          else reduce_app (Abs (v, first)) second
-         | App (first, second) -> reduce_app first second
-         | Abs (v, lam) -> let (norm_lam, p, flag) = one_step_with_succ lam preproc in (Abs (v, norm_lam), p, flag) in
-         let new_p = if (not continue_norm) 
-          then StringMap.add key (to_unary value) new_preproc 
-          else new_preproc in
-         (* print_string (string_of_lambda lambda ^ "\n\n\n\n"); *)
-         (value, new_p, not (is_normal_form value));;
+let rec ref_of_lambda lambda =
+  match lambda with
+  | Var v -> ref (Var_arena v)
+  | App (x, y) -> ref (App_arena (ref_of_lambda x, ref_of_lambda y))
+  | Abs (x, y) -> ref (Abs_arena (x, ref_of_lambda y));;
 
-(* Свести выражение к нормальной форме с использованием нормального
-   порядка редукции; реализация должна быть эффективной: использовать
-   меморизацию *)
-let reduce_to_normal_form lambda = 
-    let rec reduction lambda preproc  =
-    match one_step_with_succ lambda preproc with
-    | (value, _, false) -> value
-    | (value, p, _) -> reduction value p
-  in reduction lambda StringMap.empty
+let rec lambda_of_arena arena_lambda =
+  match !arena_lambda with
+  | Var_arena v -> Var v
+  | App_arena (x, y) -> App (lambda_of_arena x, lambda_of_arena y)
+  | Abs_arena (x, y) -> Abs (x, lambda_of_arena y);;
+
+let unique_var = Stream.from (fun i -> Some ("var" ^ string_of_int i));;
+
+let rec reduction_step arena_lambda =
+  let rec to_alpha_eq arena_lambda map =
+    match !arena_lambda with
+    | Var_arena v -> if SM.mem v map then ref (Var_arena (SM.find v map)) else arena_lambda
+    | App_arena (x, y) -> ref (App_arena (to_alpha_eq x map, to_alpha_eq y map))
+    | Abs_arena (x, y) ->
+      let temp = Stream.next unique_var in
+      ref (Abs_arena (temp, to_alpha_eq y (SM.add x temp map)))
+  in
+  let rec try_to_subst src dest key =
+    match !dest with
+    | Var_arena a -> if a = key then dest := !src
+    | Abs_arena (a, b) -> if a <> key then try_to_subst src b key
+    | App_arena (a, b) ->
+      try_to_subst src a key;
+      try_to_subst src b key
+  in
+  let reduction_app a b =
+    match !a with
+    | Abs_arena (x, y) ->
+      let temp = Stream.next unique_var in
+      arena_lambda := !(to_alpha_eq y (SM.singleton x temp));
+      try_to_subst b arena_lambda temp;
+      (arena_lambda, true)
+    | _ ->
+      match reduction_step a with
+      | (_, true) -> (arena_lambda, true)
+      | _ ->
+        match reduction_step b with
+        | (_, true) -> (arena_lambda, true)
+        | _ -> (arena_lambda, false)
+  in
+  match !arena_lambda with
+  | Var_arena a -> (ref (Var_arena a), false)
+  | App_arena (a, b) -> reduction_app a b
+  | Abs_arena (a, b) ->
+    match reduction_step b with
+    | (_, true) -> (arena_lambda, true)
+    | _ -> (arena_lambda, false)
+
+let normal_beta_reduction lambda =
+  match reduction_step (ref_of_lambda lambda) with
+  | (x, true) -> lambda_of_arena x
+  | _ -> lambda;;
+
+let reduce_to_normal_form lambda =
+  let rec reduction arena_lambda =
+    match reduction_step arena_lambda with
+    | (x, true) -> reduction x
+    | _ -> arena_lambda
+  in
+  let result = reduction (ref_of_lambda lambda) in
+  lambda_of_arena result;;
 	

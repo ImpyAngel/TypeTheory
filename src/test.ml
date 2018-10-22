@@ -203,8 +203,9 @@ let second_hw_tests = Header ("-----SECOND HW----", [
         [
         Lambda (reduce_to_normal_form (lambda_of_string "(\\y.\\m.y (\\f.\\n.(\\s.(s (\\x.\\a.\\b.b) (\\a.\\b.a)) (\\f.\\x.x) (f s)) (m n)) (\\f.\\x.
 f (f (f x)))) (\\f.(\\x.f (x x)) (\\x.f (x x))) ((\\n.\\f.\\x.n (\\g.\\h.h (g f)) (\\u.x) (\\u.u)))"));  
-        Lambda (reduce_to_normal_form (lambda_of_string "(\\x.x (t)) (\\x.x (t))"));
-        Lambda (reduce_to_normal_form (lambda_of_string "((\\z.(\\y.y)) ((\\x.x x) (\\x.x x))) t"))])
+        Lambda (reduce_to_normal_form (lambda_of_string "(\\s.\\k.\\i.(((s ((s (k s)) ((s ((s (k s)) ((s (k k)) i))) (k ((s (k (s ((s (k s)) ((s (k (s (k (s ((s ((s ((s i) (k (k (k i))))) (k ((s (k k)) i)))) (k ((s ((s (k s)) ((s (k k)) i))) (k i))))))))) ((s ((s (k s)) ((s (k k)) ((s (k s)) ((s (k (s (k ((s ((s (k s)) ((s (k k)) ((s (k s)) ((s (k k)) i))))) (k ((s ((s (k s)) ((s (k k)) i))) (k i)))))))) ((s ((s (k s)) ((s (k k)) i))) (k i))))))) (k ((s (k k)) i)))))))) ((s (k k)) ((s ((s (k s)) ((s (k k)) i))) (k i)))))))) (k (k ((s ((s (k s)) ((s (k k)) i))) ((s ((s (k s)) ((s (k k)) i))) ((s ((s (k s)) ((s (k k)) i))) (k i))))))) ((s ((s ((s (k s)) ((s (k k)) i))) (k ((s i) i)))) ((s ((s (k s)) ((s (k k)) i))) (k ((s i) i))))) ((s ((s (k s)) ((s (k (s (k s)))) ((s ((s (k s)) ((s (k (s (k s)))) ((s (k (s (k k)))) ((s ((s (k s)) ((s (k k)) i))) (k ((s (k (s (k (s i))))) ((s (k (s (k k)))) ((s (k (s i))) ((s (k k)) i)))))))))) (k (k ((s (k k)) i))))))) (k (k (k i))))) (\\x.\\y.\\z.x z (y z)) (\\x.\\y.x) (\\x.x)"));
+        Lambda (reduce_to_normal_form (lambda_of_string "(\\x.x (t)) (\\x.x (t))")); 
+        Lambda (reduce_to_normal_form (lambda_of_string "((\\x.(\\y.x)) (\\z.y)) k"))])
 ]);; 
 
 let third_hw_tests = Header ("------THIRD HW----", [
@@ -232,7 +233,7 @@ let third_hw_tests = Header ("------THIRD HW----", [
             Bool (check_solution subst smarter_sys);
             Bool (check_solution subst smart_but_wrong_sys)]);
 
-    T_case ("solve_system",
+    (* T_case ("solve_system",
         let eq1 = (Fun("A", [Var "b"]), Var "a") in
         let eq2 = (Fun("B", [Var "c"; Var "a"]), Fun("B", [Fun("C", []); Var "a"])) in
         let eq3 = (Fun ("fun", [Var "a"]), Fun ("fun", [Var "f"])) in
@@ -243,7 +244,23 @@ let third_hw_tests = Header ("------THIRD HW----", [
                 | None -> false
                 | Some subst -> check_solution subst sys in
             [Solved_system res;
+            Bool (check_correctness sys res)]); *)
+
+    T_case ("solve_system2",
+        let sys = [
+            (Fun("a", [Var "tx"; Fun("a", [Var "ty"; Fun("a", [Var "tz";Var "t2"])])]), Fun("a", [Fun("a", [Var "ta"; Fun("a", [Var "tb"; Var "ta"])]); Var "t1"]));
+            (Var("ty"), Fun("a", [Var "tz"; Var "t4"]));
+            (Var("tx"), Fun("a", [Var "tz"; Var "t3"]));
+            (Var("t3"), Fun("a", [Var "t4"; Var "t2"]));
+            ] in     
+        let res = solve_system sys in
+        let check_correctness sys res = match res with
+                | None -> false
+                | Some subst -> check_solution subst sys in
+            [Solved_system res;
             Bool (check_correctness sys res)])])
+
+
 
 let fourth_hw_tests = Header ("-----FOURTH HW----", [
     T_case ("infer_simp_type",
@@ -264,7 +281,7 @@ let fourth_hw_tests = Header ("-----FOURTH HW----", [
         let l1 = HM_Abs ("x", HM_Var "x") in
         let l2 = HM_Let ("q", HM_App (HM_Var "f", HM_App (HM_Var "f", HM_Var "x")), HM_Abs ("f", HM_Abs ("x", HM_Var "q"))) in
         let l3 = HM_Let ("id", HM_Abs ("x", HM_Var "x"), HM_Var "id") in 
-
+        let l4 = HM_Let("w", HM_Abs("f", HM_Abs("x", HM_App(HM_Var("f"), HM_App(HM_Var("f"), HM_Var("x"))))), HM_App(HM_Var("w"), HM_App(HM_Var("w"), HM_App(HM_Var("w"), HM_App(HM_Var("w"), HM_App(HM_Var("w"), HM_App(HM_Var("w"), HM_App(HM_Var("w"), HM_App(HM_Var("w"), HM_App(HM_Var("w"), HM_App(HM_Var("w"), HM_App(HM_Var("w"), HM_App(HM_Var("w"), HM_Var("w")))))))))))))) in
         let check_algorithm_w lambda = match algorithm_w lambda with
             | None -> String "Failed to infer"
             | Some (l, res) -> T_case ("check_algorithm_w:",
@@ -275,6 +292,7 @@ let fourth_hw_tests = Header ("-----FOURTH HW----", [
         [check_algorithm_w l1;
         check_algorithm_w l2;
         check_algorithm_w l3;
+        check_algorithm_w l4;
         check_algorithm_w (HM_Var "x")]
         )
 ]);;
