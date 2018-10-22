@@ -200,8 +200,9 @@ let second_hw_tests = Header ("-----SECOND HW----", [
         [String_list (free_vars (lambda_of_string ("(\\x.\\y.x) y")))]);
 
     T_case ("reduce_to_normal_form",
-        [Lambda (reduce_to_normal_form (lambda_of_string "(\\x.\\y.z x (\\u.u x)) (\\x.w x)"));
-        Lambda (reduce_to_normal_form (lambda_of_string "(\\x.x \\z.x) z"));
+        [
+        Lambda (reduce_to_normal_form (lambda_of_string "(\\y.\\m.y (\\f.\\n.(\\s.(s (\\x.\\a.\\b.b) (\\a.\\b.a)) (\\f.\\x.x) (f s)) (m n)) (\\f.\\x.
+f (f (f x)))) (\\f.(\\x.f (x x)) (\\x.f (x x))) ((\\n.\\f.\\x.n (\\g.\\h.h (g f)) (\\u.x) (\\u.u)))"));  
         Lambda (reduce_to_normal_form (lambda_of_string "(\\x.x (t)) (\\x.x (t))"));
         Lambda (reduce_to_normal_form (lambda_of_string "((\\z.(\\y.y)) ((\\x.x x) (\\x.x x))) t"))])
 ]);; 
@@ -282,5 +283,3 @@ my_print first_hw_tests;;
 my_print second_hw_tests;;
 my_print third_hw_tests;;
 my_print fourth_hw_tests;;
-
-(* my_print (Lambda (reduce_to_normal_form (lambda_of_string "(\\x.\\y.x) (\\y.y)"))) *) 
